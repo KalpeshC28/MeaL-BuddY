@@ -4,6 +4,14 @@
 
 Smart Recipe Generator is a full-stack web application that helps users discover, search, and manage recipes. The application integrates with the Spoonacular API to provide comprehensive recipe data including ingredients, instructions, nutritional information, and cooking details. Users can search for recipes with various filters, save favorites, rate recipes, and maintain their cooking history.
 
+**Recent Updates (January 2025):**
+- Removed PostgreSQL dependency - now works as a simple web app with in-memory storage
+- Complete UI transformation to futuristic design with glassmorphism effects
+- Dark theme with neon cyan, purple, and pink accents
+- Modern Space Grotesk and JetBrains Mono typography
+- Smooth animations, floating elements, and interactive transitions
+- Enhanced loading screen and micro-interactions throughout the app
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.

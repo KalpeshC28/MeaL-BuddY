@@ -63,32 +63,63 @@ function RecipeFilter({ onFilterChange, onSearch, isLoading = false }) {
     };
 
     return (
-        <div className="filter-section">
+        <div className="glass-card search-section">
+            <div className="text-center mb-4">
+                <h2 className="search-title text-gradient">
+                    <i className="fas fa-magic me-3"></i>
+                    Discover Your Next Culinary Adventure
+                </h2>
+                <p className="text-secondary">Search through millions of recipes with intelligent filters</p>
+            </div>
+            
             <form onSubmit={handleSearch}>
                 <div className="row">
-                    <div className="col-md-12 mb-3">
+                    <div className="col-md-12 mb-4">
                         <label className="form-label">
-                            <i className="fas fa-search"></i> Search Recipes
+                            <i className="fas fa-brain me-2 text-gradient"></i> AI-Powered Recipe Search
                         </label>
-                        <div className="input-group">
+                        <div className="position-relative">
                             <input
                                 type="text"
                                 className="form-control"
-                                placeholder="Enter ingredients, recipe name, or keywords..."
+                                placeholder="Type ingredients, cuisines, or describe your perfect meal..."
                                 value={filters.query}
                                 onChange={(e) => handleInputChange('query', e.target.value)}
+                                style={{
+                                    paddingLeft: '3rem',
+                                    fontSize: '1.1rem',
+                                    height: '3.5rem'
+                                }}
                             />
+                            <i className="fas fa-search position-absolute" style={{
+                                left: '1rem',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                color: 'var(--primary-cyan)',
+                                opacity: '0.7'
+                            }}></i>
                             <button 
                                 type="submit" 
-                                className="btn btn-primary"
+                                className="btn btn-primary position-absolute"
                                 disabled={isLoading}
+                                style={{
+                                    right: '0.5rem',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    borderRadius: '12px'
+                                }}
                             >
                                 {isLoading ? (
-                                    <span className="spinner-border spinner-border-sm me-2"></span>
+                                    <>
+                                        <span className="spinner-border spinner-border-sm me-2"></span>
+                                        Searching...
+                                    </>
                                 ) : (
-                                    <i className="fas fa-search me-2"></i>
+                                    <>
+                                        <i className="fas fa-rocket me-2"></i>
+                                        Search
+                                    </>
                                 )}
-                                Search
                             </button>
                         </div>
                     </div>

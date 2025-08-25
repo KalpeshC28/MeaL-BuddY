@@ -97,8 +97,15 @@ function App() {
             }
         } catch (error) {
             console.error('Search error:', error);
-            helpers.showToast('Error searching recipes: ' + error.message, 'danger');
-            setRecipes([]);
+            
+            // Handle API quota exceeded gracefully
+            if (error.message.includes('402') || error.message.includes('Payment Required')) {
+                helpers.showToast('API quota exceeded. Please try again later or contact support for more requests.', 'warning');
+                setRecipes([]);
+            } else {
+                helpers.showToast('Error searching recipes: ' + error.message, 'danger');
+                setRecipes([]);
+            }
         } finally {
             setIsLoading(false);
         }
@@ -499,5 +506,29 @@ function AuthModal({ mode, isOpen, onClose, onLogin, onRegister, onSwitchMode })
     );
 }
 
-// Render the app
-ReactDOM.render(<App />, document.getElementById('root'));
+// Enhanced React Root Creation (React 18 compatible)
+const container = document.getElementById('root');
+
+// Loading Screen Handler
+function hideLoadingScreen() {
+    const loadingScreen = document.getElementById('loading-screen');
+    if (loadingScreen) {
+        loadingScreen.style.opacity = '0';
+        loadingScreen.style.transition = 'opacity 0.5s ease-out';
+        setTimeout(() => {
+            loadingScreen.remove();
+        }, 500);
+    }
+}
+
+// Initialize app
+if (window.ReactDOM.createRoot) {
+    const root = ReactDOM.createRoot(container);
+    root.render(<App />);
+    // Hide loading screen after React renders
+    setTimeout(hideLoadingScreen, 800);
+} else {
+    ReactDOM.render(<App />, container);
+    // Hide loading screen after React renders
+    setTimeout(hideLoadingScreen, 800);
+}

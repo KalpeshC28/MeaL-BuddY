@@ -48,6 +48,14 @@ class RecipeService:
     def get_recipe_details(self, recipe_id):
         """Get detailed recipe information"""
         try:
+            # First try to get from database
+            existing_recipe = Recipe.query.filter_by(spoonacular_id=recipe_id).first()
+            
+            # If recipe exists and has instructions/nutrition, return it
+            if existing_recipe and existing_recipe.instructions and existing_recipe.nutrition_info:
+                return existing_recipe.to_dict()
+            
+            # Otherwise fetch from API
             params = {
                 "apiKey": self.api_key,
                 "includeNutrition": True
@@ -57,6 +65,13 @@ class RecipeService:
             response.raise_for_status()
             
             recipe_data = response.json()
+            
+            # Also get analyzed instructions
+            instructions_response = requests.get(f"{self.base_url}/{recipe_id}/analyzedInstructions", 
+                                               params={"apiKey": self.api_key})
+            if instructions_response.status_code == 200:
+                recipe_data['analyzedInstructions'] = instructions_response.json()
+            
             return self._process_recipe_data(recipe_data, detailed=True)
             
         except requests.RequestException as e:
@@ -84,7 +99,9 @@ class RecipeService:
             
             # Check if recipe already exists
             existing_recipe = Recipe.query.filter_by(spoonacular_id=spoonacular_id).first()
-            if existing_recipe:
+            
+            # If not detailed call and recipe exists, return existing
+            if existing_recipe and not detailed:
                 return existing_recipe.to_dict()
             
             # Extract cuisine types
@@ -132,12 +149,13 @@ class RecipeService:
             
             # Process nutrition info
             nutrition_info = {}
-            if 'nutrition' in recipe_data:
+            if 'nutrition' in recipe_data and 'nutrients' in recipe_data['nutrition']:
+                nutrients = recipe_data['nutrition']['nutrients']
                 nutrition_info = {
-                    'calories': recipe_data['nutrition'].get('nutrients', [{}])[0].get('amount', 0),
-                    'protein': next((n['amount'] for n in recipe_data['nutrition'].get('nutrients', []) if n['name'] == 'Protein'), 0),
-                    'carbs': next((n['amount'] for n in recipe_data['nutrition'].get('nutrients', []) if n['name'] == 'Carbohydrates'), 0),
-                    'fat': next((n['amount'] for n in recipe_data['nutrition'].get('nutrients', []) if n['name'] == 'Fat'), 0)
+                    'calories': next((n['amount'] for n in nutrients if n.get('name') == 'Calories'), 0),
+                    'protein': next((n['amount'] for n in nutrients if n.get('name') == 'Protein'), 0),
+                    'carbs': next((n['amount'] for n in nutrients if n.get('name') == 'Carbohydrates'), 0),
+                    'fat': next((n['amount'] for n in nutrients if n.get('name') == 'Fat'), 0)
                 }
             
             # Determine difficulty level
@@ -149,26 +167,42 @@ class RecipeService:
             else:
                 difficulty = 'Hard'
             
-            # Create new recipe
-            recipe = Recipe(
-                spoonacular_id=spoonacular_id,
-                title=recipe_data.get('title', ''),
-                image_url=recipe_data.get('image', ''),
-                ready_in_minutes=ready_time,
-                servings=recipe_data.get('servings', 1),
-                summary=recipe_data.get('summary', ''),
-                instructions=instructions,
-                ingredients=json.dumps(ingredients),
-                cuisine_types=','.join(cuisine_types),
-                meal_types=','.join(meal_types),
-                dietary_info=','.join(dietary_info),
-                nutrition_info=json.dumps(nutrition_info),
-                difficulty_level=difficulty
-            )
+            # Create or update recipe
+            if existing_recipe:
+                # Update existing recipe with new data
+                existing_recipe.title = recipe_data.get('title', existing_recipe.title)
+                existing_recipe.image_url = recipe_data.get('image', existing_recipe.image_url)
+                existing_recipe.ready_in_minutes = ready_time
+                existing_recipe.servings = recipe_data.get('servings', existing_recipe.servings)
+                existing_recipe.summary = recipe_data.get('summary', existing_recipe.summary)
+                existing_recipe.instructions = instructions or existing_recipe.instructions
+                existing_recipe.ingredients = json.dumps(ingredients) if ingredients else existing_recipe.ingredients
+                existing_recipe.cuisine_types = ','.join(cuisine_types) if cuisine_types else existing_recipe.cuisine_types
+                existing_recipe.meal_types = ','.join(meal_types) if meal_types else existing_recipe.meal_types
+                existing_recipe.dietary_info = ','.join(dietary_info) if dietary_info else existing_recipe.dietary_info
+                existing_recipe.nutrition_info = json.dumps(nutrition_info) if nutrition_info else existing_recipe.nutrition_info
+                existing_recipe.difficulty_level = difficulty
+                recipe = existing_recipe
+            else:
+                # Create new recipe
+                recipe = Recipe(
+                    spoonacular_id=spoonacular_id,
+                    title=recipe_data.get('title', ''),
+                    image_url=recipe_data.get('image', ''),
+                    ready_in_minutes=ready_time,
+                    servings=recipe_data.get('servings', 1),
+                    summary=recipe_data.get('summary', ''),
+                    instructions=instructions,
+                    ingredients=json.dumps(ingredients),
+                    cuisine_types=','.join(cuisine_types),
+                    meal_types=','.join(meal_types),
+                    dietary_info=','.join(dietary_info),
+                    nutrition_info=json.dumps(nutrition_info),
+                    difficulty_level=difficulty
+                )
+                db.session.add(recipe)
             
-            db.session.add(recipe)
             db.session.commit()
-            
             return recipe.to_dict()
             
         except Exception as e:
